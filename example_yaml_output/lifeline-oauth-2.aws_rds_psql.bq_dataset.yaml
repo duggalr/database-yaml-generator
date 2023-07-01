@@ -1,0 +1,21 @@
+version: 2 
+models: 
+    - name: lifeline-oauth-2.aws_rds_psql.bq_dataset
+    description: This table contains information about the BigQuery datasets in the lifeline-oauth-2 AWS RDS PostgreSQL database. It includes the dataset ID, name, clean name, URL, short description, date added, public dataset flag, and user object ID.
+    columns:
+        - name: id
+        description: This is the primary key of the table.
+        - name: big_query_dataset_name
+        description: This is the name of the BigQuery dataset.
+        - name: clean_name
+        description: This is a cleaned version of the dataset name.
+        - name: url
+        description: This is the URL of the dataset.
+        - name: short_description
+        description: This is a short description of the dataset.
+        - name: date_added
+        description: This is a timestamp indicating when the dataset was added to the table.
+        - name: public_dataset
+        description: This flag indicates whether the dataset is public.
+        - name: user_object_id
+        description: This is the object ID of the user who added the dataset.
