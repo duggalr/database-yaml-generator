@@ -53,6 +53,11 @@ class BigQueryDBConnection(object):
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_fp
         self.client = bigquery.Client()
 
+    def _save_yaml_file(self, file_path, content):
+        print(f'Saving YAML file: {file_path}')
+        with open(file_path, 'w') as file:
+            file.write(content)
+
     def generate_table_schema_dict(self, table_id):
         try:
             table = self.client.get_table(table_id)  
@@ -72,7 +77,6 @@ class BigQueryDBConnection(object):
         return tb_schema_list
 
     def generate_dataset_schema_dict(self, dataset_id):
-        # project_name = dataset_id.split('.')[0]
         tables = self.client.list_tables(dataset_id)
 
         table_dict = {}
@@ -97,86 +101,68 @@ class BigQueryDBConnection(object):
 
         return table_dict
 
-
-
-def main(args):
-
-    output_dir = args.output_dir
-    if os.path.isdir(output_dir) is False:
-        os.mkdir(output_dir)
-
-    bqc = BigQueryDBConnection(
-        credentials_fp = args.bigquery_credentials_filepath
-    )
-
-    opai = OpenAIConnection()
-
-    bq_table_name = None
-    bq_dataset_name = None
-
-    user_input = input('Would you like to generate a YAML for a BigQuery Table or BigQuery Dataset. Enter 1 for the former, 2 for the latter: ')
-    if user_input == '1':
-        bq_table_name = input('Enter your BigQuery Table ID. It must be the full identifier (ie. project_id.dataset_id.table_id): ')
-    elif user_input == '2':
-        bq_dataset_name = input('Enter your BigQuery Dataset ID. It must be the full identifier (ie. project_id.dataset_id): ')
-    else:
-        raise Exception("Invalid input entered for question. Should be 1 or 2.")
-    
-    if bq_table_name is not None:
-
-        print('Generating table schema dict...')
-
-        table_schema = bqc.generate_table_schema_dict(
-            table_id = bq_table_name
-        )
-
-        print(f'Generating column descriptions for {bq_table_name} using gpt...')
-
+    def process_bq_table(self, bqc, opai, bq_table_name, output_dir):
+        print(f'Generating column descriptions for {bq_table_name} using GPT...')
+        table_schema = bqc.generate_table_schema_dict(table_id=bq_table_name)
         table_desc_prompt = opai.generate_schema_text(table_schema, bq_table_name)
         yaml_prompt = opai.generate_yaml_prompt(table_desc_prompt)
         res = opai.run_chat_gpt_completion(yaml_prompt)
 
         fn = f'{bq_table_name}.yaml'
-        print(f'Saving YAML file {fn}...')
-
         out_fp = os.path.join(output_dir, fn)
+        self._save_yaml_file(out_fp, res)
 
-        with open(out_fp, 'w') as file:
-            file.write(res)
+    def process_bq_dataset(self, bqc, opai, bq_dataset_name, output_dir):
+        dataset_schema_dict = bqc.generate_dataset_schema_dict(dataset_id=bq_dataset_name)
 
-    else:
-        
-        dataset_schema_dict = bqc.generate_dataset_schema_dict(
-            dataset_id = bq_dataset_name
-        )
-
-        for tb_name in dataset_schema_dict:
-            print(f"Generating column descriptions for {tb_name} using gpt...")
-            
-            table_schema_list = dataset_schema_dict[tb_name]
-
+        for tb_name, table_schema_list in dataset_schema_dict.items():
+            print(f"Generating column descriptions for {tb_name} using GPT...")
             table_desc_prompt = opai.generate_schema_text(table_schema_list, tb_name)
             yaml_prompt = opai.generate_yaml_prompt(table_desc_prompt)
             res = opai.run_chat_gpt_completion(yaml_prompt)
 
-            print('Saving YAML file...')
-
             fn = f'{bq_dataset_name}.{tb_name}.yaml'
-            print(f'Saving YAML file {fn}...')
-
             out_fp = os.path.join(output_dir, fn)
-
-            with open(out_fp, 'w') as file:
-                file.write(res)
+            self._save_yaml_file(out_fp, res)
 
 
+def main(args):
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
 
+    bqc = BigQueryDBConnection(
+        credentials_fp=args.bigquery_credentials_filepath
+    )
+    opai = OpenAIConnection()
+
+    bq_table_name = None
+    bq_dataset_name = None
+
+    user_input = input('Would you like to generate a YAML for a BigQuery Table or BigQuery Dataset? Enter 1 for the former, 2 for the latter: ')
+    if user_input == '1':
+        bq_table_name = input('Enter your BigQuery Table ID. It must be the full identifier (i.e., project_id.dataset_id.table_id): ')
+    elif user_input == '2':
+        bq_dataset_name = input('Enter your BigQuery Dataset ID. It must be the full identifier (i.e., project_id.dataset_id): ')
+    else:
+        raise Exception("Invalid input entered for the question. Should be 1 or 2.")
+
+    if bq_table_name:
+        bqc.process_bq_table(bqc, opai, bq_table_name, output_dir)
+    elif bq_dataset_name:
+        bqc.process_bq_dataset(bqc, opai, bq_dataset_name, output_dir)
+    else:
+        raise Exception("No BigQuery Table or Dataset specified.")
+
+
+
+## Test: 
 # python3 table_yaml_generator.py --bigquery_credentials_filepath /Users/rahul/Desktop/wh_service_accounts/lifeline-oauth-2-31ec407e8880.json --output_dir yaml_output
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog = 'ERD Generator',
-        description = 'Generate a ERD for your sqlite, postgres, or bigquery tables.',
+        description = 'Generate DBT Yaml Files for your BigQuery Warehouse.',
     )
     parser.add_argument('--bigquery_credentials_filepath')
     parser.add_argument('--output_dir')
@@ -185,3 +171,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
+
