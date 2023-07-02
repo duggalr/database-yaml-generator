@@ -4,6 +4,9 @@ This project allows you to quickly generate YAML files for each table in your Bi
 
 Credits to GPT for generating the README.
 
+## Demo (use 2x playback speed)
+https://github.com/duggalr/database-yaml-generator/assets/76915349/9d937468-fcb6-43d0-b94a-cbd1c18b9a91
+
 ## Getting Started 
 
 To get started, you will need to install `requirements.txt` which includes the necessary pip packages for the script, as well as create a virtualenv with Python.
