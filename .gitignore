@@ -3,3 +3,4 @@ __pycache__
 .env
 yaml_output
 yaml_prompt.txt
+database-yaml-env/

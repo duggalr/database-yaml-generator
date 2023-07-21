@@ -25,7 +25,7 @@ class OpenAIConnection:
     def run_chat_gpt_completion(self, prompt):
         message_list = [{"role": "user", "content": prompt}]
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo-0613",
+            model="gpt-3.5-turbo-16k-0613",
             messages=message_list
         )
         message_text = response["choices"][0]["message"]["content"]
@@ -53,6 +53,7 @@ class BigQueryDBConnection:
         tb_schema_list = []
         for sch_field in table_schema:
             col_name = sch_field.name
+            print(f"On Column: {col_name}")
             col_type = sch_field.field_type
             tb_schema_list.append({
                 'col_name': col_name,
@@ -80,6 +81,7 @@ class BigQueryDBConnection:
             tb_schema_list = []
             for sch_field in table_schema:
                 col_name = sch_field.name
+                
                 col_type = sch_field.field_type
                 tb_schema_list.append({
                     'col_name': col_name,
